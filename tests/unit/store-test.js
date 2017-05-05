@@ -8,6 +8,7 @@ moduleFor('service:store', 'Unit | Service | store', {
   needs: [
     'model:file',
     'model:user',
+    'serializer:application',
   ],
 
   beforeEach() {
