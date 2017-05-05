@@ -1,14 +1,12 @@
 import Ember from 'ember';
 import {moduleFor, test} from 'ember-qunit';
-import {manualSetup, mockCreate, build} from 'ember-data-factory-guy';
+import FactoryGuy, {manualSetup, mockCreate} from 'ember-data-factory-guy';
 import wait from 'ember-test-helpers/wait';
-import Changeset from 'ember-changeset';
 
 moduleFor('service:store', 'Unit | Service | store', {
   needs: [
     'model:file',
     'model:user',
-    'serializer:application',
   ],
 
   beforeEach() {
@@ -16,35 +14,38 @@ moduleFor('service:store', 'Unit | Service | store', {
   },
 });
 
-test('save with changeset updates relationships', function(assert) {
+test('save directly with changeset updates model', async function(assert) {
   const store = this.subject();
+  FactoryGuy.setStore(store);
 
   Ember.run(async () => {
-    const user = build('user');
-    const file = store.createRecord('file');
-    const changeset = new Changeset(file);
-    changeset.set('path', 'hello');
+    const file = store.createRecord('file', {path: 'hello'});
 
-    assert.equal(file.belongsTo('createdBy').id(), null);
+    assert.equal(file.get('name'), null);
+    assert.equal(file.get('path'), 'hello');
 
-    mockCreate('file').returns({attrs: {
-      createdBy: user,
-    }});
+    mockCreate('file').returns({
+      attrs: {
+        name: "new-name",
+        path: "new-path",
+      },
+    });
 
-    await store.saveChangeset(changeset);
+    await file.save();
 
-    assert.equal(file.belongsTo('createdBy').id(), user.get('id'));
+    assert.notEqual(file.get('id'), null);
+    assert.equal(file.get('name'), 'new-name');
+    assert.equal(file.get('path'), 'new-path');
   });
 
   return wait();
 });
 
-test('it should update belongsTo', function(assert) {
-
+test('it should update belongsTo', async function(assert) {
   const store = this.subject();
+  FactoryGuy.setStore(store);
 
   Ember.run(async () => {
-    const user = build('user');
     const file = store.createRecord('file', {
       path: 'hello',
     });
@@ -52,12 +53,15 @@ test('it should update belongsTo', function(assert) {
     assert.equal(file.belongsTo('createdBy').id(), null);
 
     mockCreate('file').returns({attrs: {
-      createdBy: user,
+      createdBy: {id: '2'},
     }});
 
     await file.save();
 
-    assert.equal(file.belongsTo('createdBy').id(), user.get('id'));
+    // this changes outcome of the tests
+    // await file.get('createdBy');
+
+    assert.equal(file.belongsTo('createdBy').id(), '2');
   });
 
   return wait();
